@@ -1,0 +1,1475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CFnew 控制台</title>
+<style>
+:root {
+  --bg: #0a0e17; --bg-2: #111827; --bg-3: #1a2332; --bg-elev: #1f2937;
+  --border: #1f2937; --border-2: #2d3a4f;
+  --text: #f3f4f6; --text-dim: #9ca3af; --text-mute: #6b7280;
+  --accent: #38bdf8; --accent-2: #0ea5e9;
+  --accent-bg: rgba(56, 189, 248, 0.1); --accent-border: rgba(56, 189, 248, 0.35);
+  --success: #10b981; --success-bg: rgba(16, 185, 129, 0.1);
+  --danger: #ef4444; --danger-bg: rgba(239, 68, 68, 0.1);
+  --warning: #f59e0b; --warning-bg: rgba(245, 158, 11, 0.1);
+  --purple: #a78bfa; --purple-bg: rgba(167, 139, 250, 0.1);
+  --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+  background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: rgba(56,189,248,0.3); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 5px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover { background: #3d4d66; }
+
+.app { min-height: 100vh; display: flex; flex-direction: column; }
+
+.header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(10, 14, 23, 0.88);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: .3px; }
+.brand-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #818cf8);
+  color: #0a0e17; font-size: 17px; font-weight: 800;
+  box-shadow: 0 0 18px rgba(56,189,248,0.35);
+}
+.header-right { display: flex; align-items: center; gap: 10px; }
+.node-chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 14px; background: var(--bg-3);
+  border: 1px solid var(--accent-border); border-radius: 999px;
+  font-size: 12px; font-weight: 500; color: var(--accent);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  cursor: pointer; transition: all .18s;
+  max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.node-chip::before { content: '⌂'; font-size: 12px; color: var(--accent); flex-shrink: 0; }
+.node-chip:hover { background: var(--bg-elev); box-shadow: 0 0 14px var(--accent-bg); transform: translateY(-1px); }
+.node-chip.empty { color: var(--text-mute); border-color: var(--border-2); }
+.node-chip.empty::before { color: var(--text-mute); }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 13px; border-radius: 999px;
+  font-size: 12px; font-weight: 500;
+  background: var(--bg-3); color: var(--text-dim);
+  border: 1px solid var(--border-2); flex-shrink: 0;
+}
+.status-pill.connected { background: var(--success-bg); color: var(--success); border-color: rgba(16,185,129,0.3); }
+.status-pill.error { background: var(--danger-bg); color: var(--danger); border-color: rgba(239,68,68,0.3); }
+.status-pill.warn { background: var(--warning-bg); color: var(--warning); border-color: rgba(245,158,11,0.3); }
+.status-pill::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.status-pill.connected::before { box-shadow: 0 0 8px currentColor; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+
+.tabs {
+  display: flex; gap: 6px; padding: 8px 24px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto; scrollbar-width: none;
+  background: rgba(10,14,23,0.4);
+}
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  position: relative; padding: 11px 20px 15px;
+  background: none; border: none;
+  color: var(--text-dim); font-size: 14px; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: color .15s; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 7px;
+  border-radius: 8px 8px 0 0;
+}
+.tab:hover { color: var(--text); background: rgba(56,189,248,0.04); }
+.tab.active { color: var(--accent); }
+.tab.active::after {
+  content: ''; position: absolute; bottom: -1px; left: 14px; right: 14px;
+  height: 2px; background: var(--accent); border-radius: 2px 2px 0 0;
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.content { flex: 1; padding: 24px; max-width: 1120px; width: 100%; margin: 0 auto; }
+.panel { display: none; animation: fadeIn .22s ease; }
+.panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.card {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px 24px;
+  margin-bottom: 18px; box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 18px; display: flex; align-items: center; gap: 9px;
+}
+.card-title::before {
+  content: ''; width: 3px; height: 15px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  border-radius: 2px; flex-shrink: 0;
+}
+.card-title .title-actions { margin-left: auto; }
+.card-subtitle { font-size: 12.5px; color: var(--text-mute); margin: -10px 0 18px 0; line-height: 1.55; }
+.card-subtitle code {
+  padding: 1px 5px; background: var(--accent-bg); color: var(--accent);
+  border-radius: 3px; font-size: 11.5px; font-family: ui-monospace, monospace;
+}
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+@media (max-width: 860px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 480px) { .stat-grid { grid-template-columns: 1fr; } }
+.stat-card {
+  display: flex; align-items: center; gap: 13px;
+  padding: 15px 16px; background: var(--bg-3);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  transition: all .2s;
+}
+.stat-card:hover { border-color: var(--border-2); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+.stat-icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 11px; font-size: 19px;
+  background: var(--accent-bg); border: 1px solid var(--accent-border);
+}
+.stat-card.c-green .stat-icon { background: var(--success-bg); border-color: rgba(16,185,129,0.3); }
+.stat-card.c-purple .stat-icon { background: var(--purple-bg); border-color: rgba(167,139,250,0.3); }
+.stat-card.c-warn .stat-icon { background: var(--warning-bg); border-color: rgba(245,158,11,0.3); }
+.stat-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.stat-label { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.stat-value {
+  font-size: 13.5px; color: var(--accent);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  word-break: break-all; font-weight: 500;
+}
+.stat-card.c-green .stat-value { color: var(--success); }
+.stat-card.c-purple .stat-value { color: var(--purple); }
+.stat-card.c-warn .stat-value { color: var(--warning); }
+
+.sub-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 11px; margin-bottom: 18px;
+}
+.sub-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 7px; padding: 16px 8px; background: var(--bg-3);
+  border: 1px solid var(--border-2); border-radius: var(--radius);
+  color: var(--text-dim); font-family: inherit; font-size: 12.5px; font-weight: 700;
+  letter-spacing: .04em; cursor: pointer; transition: all .18s;
+}
+.sub-btn-icon { font-size: 21px; line-height: 1; filter: grayscale(.3); transition: all .18s; }
+.sub-btn:hover {
+  background: var(--accent-bg); border-color: var(--accent);
+  color: var(--accent); transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(56,189,248,0.15);
+}
+.sub-btn:hover .sub-btn-icon { filter: none; transform: scale(1.1); }
+.sub-btn:active { transform: translateY(0); }
+
+.sub-link-box { display: flex; gap: 10px; }
+.sub-link-input {
+  flex: 1; background: var(--bg);
+  border: 1px dashed var(--accent-border); color: var(--accent);
+  font-family: ui-monospace, monospace; font-size: 13px;
+  padding: 11px 14px; border-radius: var(--radius-sm);
+}
+.sub-link-input:focus { border-style: solid; }
+
+.links-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+.link-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--accent); text-decoration: none;
+  font-size: 13.5px; font-weight: 600;
+  padding: 10px 18px; background: var(--bg-3);
+  border-radius: var(--radius-sm); border: 1px solid var(--border);
+  transition: all .18s;
+}
+.link-btn::before { content: '↗'; font-size: 13px; opacity: .7; }
+.link-btn:hover { background: var(--accent-bg); border-color: var(--accent); transform: translateY(-1px); }
+
+.form-grid { display: grid; gap: 16px 18px; }
+.form-grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 720px) { .form-grid.cols-2 { grid-template-columns: 1fr; } }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label {
+  font-size: 13px; font-weight: 600; color: var(--text-dim);
+  display: flex; align-items: center; gap: 6px;
+}
+.field-label code {
+  font-size: 10.5px; padding: 1px 6px;
+  background: var(--accent-bg); color: var(--accent);
+  border-radius: 4px; font-family: ui-monospace, monospace; font-weight: 500;
+}
+.field-hint { font-size: 11.5px; color: var(--text-mute); line-height: 1.5; }
+.field-hint code {
+  padding: 1px 5px; background: var(--accent-bg); color: var(--accent);
+  border-radius: 3px; font-size: 11px; font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+input[type="text"], select, textarea {
+  width: 100%; padding: 10px 13px;
+  background: var(--bg); border: 1px solid var(--border-2);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-family: inherit; font-size: 13.5px;
+  outline: none; transition: all .15s;
+}
+input[type="text"]::placeholder, textarea::placeholder { color: var(--text-mute); }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg);
+  background: var(--bg-2);
+}
+textarea {
+  resize: vertical; min-height: 88px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px; line-height: 1.7;
+}
+select { cursor: pointer; }
+select option { background: var(--bg-2); color: var(--text); }
+
+.switch-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 720px) { .switch-grid { grid-template-columns: 1fr; } }
+
+.switch-card {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 14px 16px; background: var(--bg-3);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  cursor: pointer; transition: all .18s; user-select: none;
+}
+.switch-card:hover { border-color: var(--border-2); background: var(--bg-elev); }
+.switch-card:has(input:checked) {
+  border-color: var(--accent-border);
+  background: linear-gradient(135deg, rgba(56,189,248,0.09), rgba(56,189,248,0.02));
+}
+.switch-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.switch-name {
+  font-size: 13.5px; font-weight: 600; color: var(--text);
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+}
+.switch-name code {
+  font-size: 10.5px; padding: 1px 6px;
+  background: var(--bg); color: var(--text-mute);
+  border-radius: 4px; font-family: ui-monospace, monospace; font-weight: 500;
+}
+.switch-card:has(input:checked) .switch-name code { background: var(--accent-bg); color: var(--accent); }
+.switch-desc { font-size: 11.5px; color: var(--text-mute); line-height: 1.5; }
+
+.switch-control { position: relative; flex-shrink: 0; width: 44px; height: 24px; }
+.switch-control input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; margin: 0; cursor: pointer; z-index: 2;
+}
+.switch-track {
+  position: absolute; inset: 0; background: var(--bg);
+  border: 1px solid var(--border-2); border-radius: 999px;
+  transition: all .2s;
+}
+.switch-thumb {
+  position: absolute; top: 2px; left: 2px;
+  width: 18px; height: 18px; background: var(--text-mute);
+  border-radius: 50%; transition: all .2s;
+}
+.switch-control input:checked + .switch-track { background: var(--accent-bg); border-color: var(--accent); }
+.switch-control input:checked + .switch-track .switch-thumb {
+  transform: translateX(20px); background: var(--accent);
+  box-shadow: 0 0 10px rgba(56,189,248,0.6);
+}
+.switch-control input:focus-visible + .switch-track { box-shadow: 0 0 0 3px var(--accent-bg); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 16px; background: var(--bg-3);
+  border: 1px solid var(--border-2); border-radius: var(--radius-sm);
+  color: var(--text); font-family: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--bg-elev); border-color: var(--accent-border); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent; color: #0a0e17; font-weight: 700;
+}
+.btn-primary:hover { box-shadow: 0 0 20px var(--accent-bg); transform: translateY(-1px); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-danger { background: var(--danger-bg); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+.btn-danger:hover { border-color: var(--danger); background: rgba(239,68,68,0.16); }
+
+.chain-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 7px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .03em;
+  background: var(--purple-bg); color: var(--purple);
+  border: 1px solid rgba(167,139,250,0.35); border-radius: 999px;
+  vertical-align: middle; cursor: help;
+}
+
+.config-pre {
+  background: #040810; color: #7dd3fc;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px; padding: 16px 18px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-2);
+  white-space: pre-wrap; word-break: break-all;
+  max-height: 220px; overflow-y: auto; line-height: 1.75;
+}
+
+.save-bar {
+  position: sticky; bottom: 0; z-index: 50;
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 13px 24px; background: rgba(10,14,23,0.9);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--border);
+}
+.save-bar .btn-primary { min-width: 150px; }
+
+.gate-mask {
+  position: fixed; inset: 0; z-index: 5000;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(56,189,248,0.12) 0%, transparent 55%),
+    rgba(6, 9, 15, 0.9);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: none; align-items: center; justify-content: center;
+  padding: 28px 16px; overflow-y: auto;
+}
+.gate-mask.open { display: flex; }
+.gate-card {
+  position: relative; width: 100%; max-width: 560px;
+  background: rgba(17,24,39,0.96);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-lg); padding: 30px 30px 26px;
+  box-shadow:
+    0 0 0 1px rgba(56,189,248,0.08),
+    0 24px 80px rgba(56,189,248,0.15),
+    inset 0 0 32px rgba(56,189,248,0.04);
+  animation: gateIn .25s ease;
+}
+@keyframes gateIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+.gate-title {
+  font-size: 20px; font-weight: 700; color: var(--accent);
+  margin-bottom: 24px; letter-spacing: .5px;
+  display: flex; align-items: center; gap: 9px;
+  text-shadow: 0 0 14px rgba(56,189,248,0.4);
+}
+.gate-title::before { content: '◉'; font-size: 18px; }
+.gate-input {
+  margin-bottom: 16px; background: var(--bg);
+  border: 1px solid var(--border-2); color: var(--accent);
+  font-family: ui-monospace, monospace; padding: 12px 14px; font-size: 14px;
+}
+.gate-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.gate-node-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.gate-node-row select {
+  flex: 1; padding: 11px 12px; background: var(--bg);
+  border: 1px solid var(--border-2); color: var(--text);
+  border-radius: var(--radius-sm); font-size: 13px;
+}
+.gate-remember {
+  display: inline-flex; align-items: center; gap: 9px;
+  padding: 0; background: transparent; border: none;
+  font-size: 13px; color: var(--text-dim);
+  cursor: pointer; margin-bottom: 18px; user-select: none;
+}
+.gate-remember input {
+  appearance: none; width: 17px; height: 17px;
+  border: 1px solid var(--text-mute); border-radius: 5px;
+  background: var(--bg); cursor: pointer; position: relative;
+  transition: all .15s; flex-shrink: 0;
+}
+.gate-remember input:checked { background: var(--accent); border-color: var(--accent); }
+.gate-remember input:checked::after {
+  content: '✓'; position: absolute; top: -1px; left: 3px;
+  color: #0a0e17; font-size: 12px; font-weight: 800;
+}
+.gate-btn-open {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #0a0e17; font-weight: 800; border: none;
+  border-radius: var(--radius-sm); cursor: pointer; font-size: 15px;
+  letter-spacing: .06em; transition: all .2s;
+  box-shadow: 0 0 20px rgba(56,189,248,0.25);
+}
+.gate-btn-open:hover { box-shadow: 0 0 32px rgba(56,189,248,0.5); transform: translateY(-1px); }
+.gate-btn-open:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.gate-cancel {
+  width: 100%; margin-top: 10px; justify-content: center; background: transparent;
+}
+.gate-hint {
+  margin-top: 18px; font-size: 11.5px; color: var(--text-mute);
+  line-height: 1.75; padding-top: 16px; border-top: 1px solid var(--border);
+}
+.gate-hint code {
+  padding: 1px 5px; background: var(--accent-bg); color: var(--accent);
+  border-radius: 3px; font-size: 11px;
+}
+
+.gate-error {
+  margin-top: 14px; padding: 11px 14px;
+  background: var(--danger-bg); border: 1px solid rgba(239,68,68,0.35);
+  border-radius: var(--radius-sm); color: var(--danger);
+  font-size: 12.5px; line-height: 1.7; word-break: break-word;
+  white-space: pre-wrap; animation: shakeIn .35s ease;
+}
+@keyframes shakeIn {
+  0% { transform: translateX(-5px); opacity: 0; }
+  25% { transform: translateX(5px); }
+  50% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+.toast-container {
+  position: fixed; top: 76px; right: 20px; z-index: 6000;
+  display: flex; flex-direction: column; gap: 8px;
+  max-width: 380px;
+}
+.toast {
+  padding: 12px 16px; background: var(--bg-2);
+  border: 1px solid var(--border-2); border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm); color: var(--text); font-size: 13px;
+  box-shadow: var(--shadow); transform: translateX(120%);
+  transition: transform .3s cubic-bezier(.22,1,.36,1);
+  word-break: break-word; white-space: pre-wrap;
+}
+.toast.show { transform: translateX(0); }
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
+
+@media (max-width: 560px) {
+  .header { padding: 10px 14px; }
+  .brand span:last-child { display: none; }
+  .node-chip { max-width: 170px; }
+  .tabs { padding: 6px 14px 0; }
+  .tab { padding: 10px 14px 13px; font-size: 13px; }
+  .content { padding: 16px 14px; }
+  .card { padding: 18px 16px; border-radius: 14px; }
+  .sub-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 9px; }
+  .sub-btn { padding: 13px 6px; font-size: 11.5px; }
+  .sub-btn-icon { font-size: 18px; }
+  .sub-link-box { flex-direction: column; }
+  .save-bar { padding: 12px 14px; }
+  .save-bar .btn { flex: 1; }
+  .gate-card { padding: 24px 18px 20px; }
+  .toast-container { right: 12px; left: 12px; max-width: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="header">
+    <div class="brand"><span class="brand-icon">◉</span><span>CFnew 控制台</span></div>
+    <div class="header-right">
+      <span class="node-chip empty" id="currentNodeChip" title="点击切换节点">未连接</span>
+      <span class="status-pill" id="apiStatus">未连接</span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="dashboard">◈ 仪表盘</button>
+    <button class="tab" data-tab="core">⚙ 核心配置</button>
+    <button class="tab" data-tab="advanced">⚡ 优选与高级</button>
+  </nav>
+
+  <main class="content">
+    <section class="panel active" id="panel-dashboard">
+      <div class="card">
+        <div class="card-title">系统状态</div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🌐</div>
+            <div class="stat-body">
+              <div class="stat-label">Worker 地区</div>
+              <div class="stat-value" id="statusRegion">检测中...</div>
+            </div>
+          </div>
+          <div class="stat-card c-green">
+            <div class="stat-icon">🛰</div>
+            <div class="stat-body">
+              <div class="stat-label">检测方式</div>
+              <div class="stat-value" id="statusMethod">检测中...</div>
+            </div>
+          </div>
+          <div class="stat-card c-green">
+            <div class="stat-icon">🔗</div>
+            <div class="stat-body">
+              <div class="stat-label">ProxyIP 状态</div>
+              <div class="stat-value" id="statusProxy">检测中...</div>
+            </div>
+          </div>
+          <div class="stat-card c-purple">
+            <div class="stat-icon">🔒</div>
+            <div class="stat-body">
+              <div class="stat-label">ECH 状态</div>
+              <div class="stat-value" id="statusEch">检测中...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">订阅中心</div>
+        <div class="card-subtitle">点击客户端按钮 → 自动复制订阅链接并尝试唤起对应 App</div>
+        <div class="sub-grid">
+          <button class="sub-btn" onclick="generateSub('clash', 'clash://install-config?url=')"><span class="sub-btn-icon">⚡</span><span>Clash</span></button>
+          <button class="sub-btn" onclick="generateSub('stash', 'stash://install?url=')"><span class="sub-btn-icon">📦</span><span>Stash</span></button>
+          <button class="sub-btn" onclick="generateSub('surge', 'surge:///install-config?url=')"><span class="sub-btn-icon">🌊</span><span>Surge</span></button>
+          <button class="sub-btn" onclick="generateSub('singbox', 'sing-box://install-config?url=')"><span class="sub-btn-icon">📦</span><span>Sing-Box</span></button>
+          <button class="sub-btn" onclick="generateSub('loon', 'loon://install?url=')"><span class="sub-btn-icon">🎈</span><span>Loon</span></button>
+          <button class="sub-btn" onclick="generateSub('quanx', 'quantumult-x://install-config?url=')"><span class="sub-btn-icon">🅧</span><span>Quantumult X</span></button>
+          <button class="sub-btn" onclick="generateSub('v2ray', '')"><span class="sub-btn-icon">🅥</span><span>V2Ray</span></button>
+          <button class="sub-btn" onclick="generateSub('v2ray', 'v2rayng://install?url=')"><span class="sub-btn-icon">🅥</span><span>V2RayNG</span></button>
+          <button class="sub-btn" onclick="generateSub('v2ray', 'nekoray://install-config?url=')"><span class="sub-btn-icon">🅝</span><span>Nekoray</span></button>
+          <button class="sub-btn" onclick="generateSub('v2ray', 'shadowrocket://add/')"><span class="sub-btn-icon">🚀</span><span>Shadowrocket</span></button>
+        </div>
+        <div class="sub-link-box">
+          <input type="text" class="sub-link-input" id="subUrlDisplay" readonly placeholder="点击上方客户端按钮生成订阅链接...">
+          <button class="btn btn-primary" onclick="copySubUrl()">复制链接</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">相关链接</div>
+        <div class="links-grid">
+          <a href="https://github.com/byJoey/cfnew" target="_blank" class="link-btn">GitHub 项目</a>
+          <a href="https://github.com/byJoey/yx-tools/releases/" target="_blank" class="link-btn">优选工具</a>
+          <a href="https://www.youtube.com/@joeyblog" target="_blank" class="link-btn">YouTube 教程</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-core">
+      <div class="card">
+        <div class="card-title">协议开关</div>
+        <div class="card-subtitle">至少启用一个协议；若全部关闭，保存时会自动启用 VLESS</div>
+        <div class="switch-grid">
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">VLESS 协议 <code>ev</code></span>
+              <span class="switch-desc">基于 WebSocket 的经典协议</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ev" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">Trojan 协议 <code>et</code></span>
+              <span class="switch-desc">使用 SHA224 密码认证</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="et"><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">xhttp 协议 <code>ex</code></span>
+              <span class="switch-desc">基于 HTTP POST 的扩展协议</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ex"><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">ECH 加密 <code>ech</code></span>
+              <span class="switch-desc">启用后自动开启「仅 TLS 节点」</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ech"><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">Free CPU 保护 <code>freeCpu</code></span>
+              <span class="switch-desc">单线程限制 384KiB / 96 块，超出断开</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="freeCpu"><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">基础参数</div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label class="field-label">Trojan 密码 / 传输路径 <code>tp</code></label>
+            <input type="text" id="tp" placeholder="留空则自动使用 UUID">
+            <span class="field-hint">设置自定义 Trojan 密码；VLESS 无此字段</span>
+          </div>
+          <div class="field">
+            <label class="field-label">TLS ALPN <code>alpn</code></label>
+            <select id="alpn">
+              <option value="">默认（由客户端协商）</option>
+              <option value="h3">h3</option>
+              <option value="h2">h2</option>
+              <option value="http/1.1">http/1.1</option>
+              <option value="h3,h2">h3,h2</option>
+              <option value="h2,http/1.1">h2,http/1.1</option>
+              <option value="h3,h2,http/1.1">h3,h2,http/1.1</option>
+            </select>
+            <span class="field-hint">留空则不写入 alpn 参数</span>
+          </div>
+          <div class="field">
+            <label class="field-label">自定义 DNS 服务器 <code>customDNS</code></label>
+            <input type="text" id="customDNS" placeholder="https://223.5.5.5/dns-query">
+            <span class="field-hint">用于 ECH 配置查询（DoH 格式）</span>
+          </div>
+          <div class="field">
+            <label class="field-label">自定义 ECH 域名 <code>customECHDomain</code></label>
+            <input type="text" id="customECHDomain" placeholder="cloudflare-ech.com">
+            <span class="field-hint">ECH 配置查询使用的域名</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">路径与代理</div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label class="field-label">自定义路径 <code>d</code></label>
+            <input type="text" id="d" placeholder="例如：/mypath">
+            <span class="field-hint">设置后访问路径变为 /自定义路径/sub</span>
+          </div>
+          <div class="field">
+            <label class="field-label">自定义 ProxyIP <code>p</code></label>
+            <input type="text" id="p" placeholder="例如：1.2.3.4:443">
+            <span class="field-hint">填写后禁用地区匹配，优先使用该地址</span>
+          </div>
+          <div class="field">
+            <label class="field-label">Socks5 代理 <code>s</code></label>
+            <input type="text" id="s" placeholder="例如：user:pass@host:port">
+            <span class="field-hint">所有出站流量通过该代理转发</span>
+          </div>
+          <div class="field">
+            <label class="field-label">自定义首页 URL <code>homepage</code></label>
+            <input type="text" id="homepage" placeholder="https://example.com">
+            <span class="field-hint">访问根路径 / 时显示该 URL 内容；留空显示 nginx 默认页</span>
+          </div>
+          <div class="field">
+            <label class="field-label">订阅转换接口 <code>scu</code></label>
+            <input type="text" id="scu" placeholder="https://url.v1.mk/sub">
+            <span class="field-hint">仅作兼容字段保留，可留空</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-advanced">
+      <div class="card">
+        <div class="card-title">自定义优选列表</div>
+        <div class="form-grid">
+          <div class="field">
+            <label class="field-label">优选 IP 列表 <code>yx</code></label>
+            <textarea id="yx" rows="6" placeholder="基础格式：IP:端口#节点名称,域名:端口#节点名称&#10;示例：1.2.3.4:443#香港节点,example.com:8443#新加坡节点&#10;&#10;链式代理（SSTP / Socks5 / HTTP）：&#10;1.2.3.4:443#香港家宽$sstp://用户:密码@家宽主机:端口&#10;1.2.3.4:443#日本原生$socks5://用户:密码@socks主机:1080"></textarea>
+            <span class="field-hint">
+              支持逗号或换行分隔，可填写多个。<br>
+              链式代理语法：在 <code>#</code> 后的节点名末尾追加 <code>$协议://用户:密码@主机:端口</code>，<br>
+              支持的协议前缀：<code>$sstp://</code> <code>$socks5://</code> <code>$http://</code> <code>$https://</code>。<br>
+              <b>链式节点会在订阅里自动生成 <code>/video/&lt;token&gt;</code> 专用路径</b>，无需另外配置。
+            </span>
+          </div>
+          <div class="field">
+            <label class="field-label">优选 IP 来源 URL <code>yxURL</code></label>
+            <input type="text" id="yxURL" placeholder="https://example.com/ips.txt">
+            <span class="field-hint">留空则使用内置地址池；支持多个 URL 用逗号分隔</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          优选 IP API 管理
+          <span class="title-actions">
+            <button class="btn btn-sm" id="btnLoadPreferred">↻ 刷新列表</button>
+          </span>
+        </div>
+        <div class="card-subtitle">
+          仅当 Worker 端开启「允许 API 管理」(ae=yes) 且已绑定 KV 时可用。<br>
+          支持链式代理语法：<code>IP:端口#名称$sstp://用户:密码@主机:端口</code>，<br>
+          系统会自动在 <code>#</code> 之后保留 <code>$协议://...</code> 部分，供订阅时建立隧道。
+        </div>
+
+        <div id="preferredAlert" class="gate-error" style="display:none;"></div>
+
+        <div class="field" style="margin-bottom:12px;">
+          <label class="field-label">添加优选 IP（每行一个，格式 IP:端口#名称）</label>
+          <textarea id="preferredInput" rows="4" placeholder="1.2.3.4:443#香港节点&#10;example.com:8443#新加坡节点&#10;1.2.3.4:443#香港家宽$sstp://用户:密码@家宽主机:端口"></textarea>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="btn btn-primary btn-sm" id="btnAddPreferred">➕ 添加</button>
+          <button class="btn btn-danger btn-sm" id="btnClearPreferred">❌ 清空全部</button>
+        </div>
+
+        <div id="preferredTable">
+          <div style="text-align:center;color:var(--text-mute);font-size:12px;padding:16px;">点击「刷新列表」加载</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">内置优选类型</div>
+        <div class="switch-grid">
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">原生地址 <code>ena</code></span>
+              <span class="switch-desc">使用 Worker 自身域名作为节点</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ena"><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">优选域名 <code>epd</code></span>
+              <span class="switch-desc">使用内置优选域名列表</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="epd" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">优选 IP <code>epi</code></span>
+              <span class="switch-desc">从接口获取 IPv4/IPv6 地址池</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="epi" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">自定义优选 <code>egi</code></span>
+              <span class="switch-desc">从自定义 URL 加载优选列表</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="egi" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">家宽链式 <code>jk</code></span>
+              <span class="switch-desc">CF 前置 + 住宅宽带落地（Clash Meta 1.19.25+）</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="jk"><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">IP 版本与运营商过滤</div>
+        <div class="switch-grid">
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">IPv4 <code>ipv4</code></span>
+              <span class="switch-desc">启用 IPv4 地址池</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ipv4" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">IPv6 <code>ipv6</code></span>
+              <span class="switch-desc">启用 IPv6 地址池</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ipv6" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">移动线路 <code>ispMobile</code></span>
+              <span class="switch-desc">中国移动</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ispMobile" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">联通线路 <code>ispUnicom</code></span>
+              <span class="switch-desc">中国联通</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ispUnicom" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+          <label class="switch-card">
+            <div class="switch-info">
+              <span class="switch-name">电信线路 <code>ispTelecom</code></span>
+              <span class="switch-desc">中国电信</span>
+            </div>
+            <span class="switch-control"><input type="checkbox" id="ispTelecom" checked><span class="switch-track"><span class="switch-thumb"></span></span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">高级控制</div>
+        <div class="form-grid cols-2">
+          <div class="field">
+            <label class="field-label">地区匹配 <code>rm</code></label>
+            <select id="rm">
+              <option value="">默认（启用地区匹配）</option>
+              <option value="no">关闭地区匹配</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">降级方式 <code>qj</code></label>
+            <select id="qj">
+              <option value="">优先直连（默认）</option>
+              <option value="no">优先直连，失败走代理</option>
+              <option value="only">只走代理，不回落</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">TLS 控制 <code>dkby</code></label>
+            <select id="dkby">
+              <option value="">保留所有节点</option>
+              <option value="yes">仅 TLS 节点</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">优选控制 <code>yxby</code></label>
+            <select id="yxby">
+              <option value="">启用优选</option>
+              <option value="yes">关闭优选</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">允许 API 管理 <code>ae</code></label>
+            <select id="ae">
+              <option value="">默认（关闭 API）</option>
+              <option value="yes">开启 API 管理</option>
+            </select>
+            <span class="field-hint">开启后可通过 API 管理优选 IP（本页"优选 IP API 管理"卡片需要它）</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          当前明文配置
+          <span class="title-actions">
+            <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('currentConfigText').textContent).then(()=>{this.textContent='已复制';setTimeout(()=>this.textContent='复制',1200)})">复制</button>
+          </span>
+        </div>
+        <pre class="config-pre" id="currentConfigText">加载中...</pre>
+      </div>
+    </section>
+  </main>
+
+  <div class="save-bar" id="saveBar" style="display: flex;">
+    <button class="btn" id="btnReload">↻ 重新加载</button>
+    <button class="btn btn-primary" id="btnSave">保存全部配置</button>
+  </div>
+</div>
+
+<div class="gate-mask" id="gatePanel">
+  <div class="gate-card">
+    <div class="gate-title">接入控制台</div>
+    <div class="field">
+      <label class="field-label">Worker 域名</label>
+      <input type="text" id="gateHost" class="gate-input" placeholder="worker.example.com">
+    </div>
+    <div class="field">
+      <label class="field-label">UUID 或自定义路径</label>
+      <input type="text" id="gatePath" class="gate-input" placeholder="填写 UUID，或 d 设置的路径">
+    </div>
+    <label class="gate-remember">
+      <input type="checkbox" id="gateRemember" checked>
+      <span>在这台设备记住节点（连接成功后才保存）</span>
+    </label>
+    <div class="gate-node-row">
+      <select id="gateNodeSelect">
+        <option value="">选择已保存的节点</option>
+      </select>
+      <button class="btn btn-danger" id="gateDeleteBtn">删除所选</button>
+    </div>
+    <button class="gate-btn-open" id="gateOpenBtn">打开控制台</button>
+    <button class="btn gate-cancel" id="gateCloseBtn">取消</button>
+    <div class="gate-error" id="gateError" style="display:none;"></div>
+    <div class="gate-hint">
+      代理流量直接连接 Worker，订阅从本服务更新。<br>
+      · 这里的 UUID 必须与 Worker 环境变量 <code>u</code> 一致；<br>
+      · 若使用自定义路径 <code>d</code>，直接填 d 的值即可；<br>
+      · 勾选「记住节点」后，<b>只有连接成功</b>才会保存；失败不会占用列表。
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+(function() {
+'use strict';
+
+const NODES_KEY = 'cfnew_nodes_v3';
+const ACTIVE_KEY = 'cfnew_active_v3';
+let apiBase = '';
+
+const $ = (id) => document.getElementById(id);
+
+/* ==================== 通用 UI ==================== */
+function toast(msg, type) {
+  type = type || 'info';
+  const container = $('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3000);
+}
+function setApiStatus(state, text) {
+  const el = $('apiStatus');
+  el.className = 'status-pill ' + (state || '');
+  el.textContent = text || '未连接';
+}
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+// 解析 item.name 中内嵌的链式代理（$sstp:// / $socks5:// / $http:// / $https://）
+// 返回 { display: 展示用名称, chain: { type, host, hasAuth } | null }
+function splitChainName(name) {
+  const raw = String(name || '');
+  const m = raw.match(/^(.*?)\$((?:sstp|socks5|https?):\/\/(.+))$/i);
+  if (!m) return { display: raw, chain: null };
+  const typeMatch = m[2].match(/^(sstp|socks5|https?):\/\//i);
+  const rest = m[3];
+  const atIdx = rest.lastIndexOf('@');
+  const hostPart = atIdx >= 0 ? rest.slice(atIdx + 1) : rest;
+  const host = hostPart.split(/[\/?#]/)[0];
+  return {
+    display: m[1].trim() || '链式代理节点',
+    chain: {
+      type: typeMatch ? typeMatch[1].toLowerCase() : 'proxy',
+      host,
+      hasAuth: atIdx >= 0
+    }
+  };
+}
+
+/* ==================== 网络工具 ==================== */
+async function rawFetch(url, options = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), options.timeout || 20000);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('请求超时');
+    throw new Error('网络请求失败');
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function apiFetch(path, options = {}) {
+  if (!apiBase) throw new Error('未连接节点');
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  const resp = await rawFetch(apiBase + path, { ...options, headers });
+  const text = await resp.text();
+  try { return JSON.parse(text); } catch (e) { throw new Error('返回格式错误 (可能 UUID 不匹配)'); }
+}
+
+/* ==================== 订阅链接 ==================== */
+window.generateSub = function(target, schemePrefix) {
+  if (!apiBase) { toast('请先接入控制台', 'warning'); return; }
+  const base = apiBase.replace(/\/+$/, '');
+  const subUrl = base + '/sub?target=' + target;
+  $('subUrlDisplay').value = subUrl;
+  navigator.clipboard.writeText(subUrl).then(() => toast('订阅链接已复制', 'success'))
+    .catch(() => toast('复制失败，请手动复制', 'warning'));
+  if (schemePrefix) {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = schemePrefix + encodeURIComponent(subUrl);
+    document.body.appendChild(iframe);
+    setTimeout(() => iframe.remove(), 2000);
+  }
+};
+window.copySubUrl = function() {
+  const val = $('subUrlDisplay').value;
+  if (!val) return toast('请先选择客户端', 'warning');
+  navigator.clipboard.writeText(val).then(() => toast('链接已复制', 'success'));
+};
+
+/* ==================== 节点管理 ==================== */
+function safeParse(raw, fallback) {
+  try { return raw ? JSON.parse(raw) : fallback; } catch (e) { return fallback; }
+}
+function loadNodes() { return safeParse(localStorage.getItem(NODES_KEY), []); }
+function saveNodes(nodes) { localStorage.setItem(NODES_KEY, JSON.stringify(nodes)); }
+function getActive() { return safeParse(localStorage.getItem(ACTIVE_KEY), null); }
+function setActive(node) {
+  if (node) localStorage.setItem(ACTIVE_KEY, JSON.stringify(node));
+  else localStorage.removeItem(ACTIVE_KEY);
+}
+function updateChip() {
+  const chip = $('currentNodeChip');
+  const active = getActive();
+  if (active && active.host) {
+    chip.textContent = active.host + ' / ' + active.path;
+    chip.classList.remove('empty');
+  } else {
+    chip.textContent = '未连接';
+    chip.classList.add('empty');
+  }
+}
+function showGate() {
+  $('gatePanel').classList.add('open');
+  const errEl = $('gateError');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  const nodes = loadNodes().sort((a, b) => b.lastUsed - a.lastUsed);
+  const sel = $('gateNodeSelect');
+  sel.innerHTML = '<option value="">选择已保存的节点</option>';
+  nodes.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n.id; opt.textContent = n.name;
+    sel.appendChild(opt);
+  });
+  const active = getActive();
+  if (active) {
+    $('gateHost').value = active.host;
+    $('gatePath').value = active.path;
+    sel.value = active.host.toLowerCase() + '|' + active.path.toLowerCase();
+  }
+}
+function hideGate() { $('gatePanel').classList.remove('open'); }
+
+$('gateNodeSelect').addEventListener('change', function() {
+  const errEl = $('gateError');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+  const id = this.value;
+  if (!id) return;
+  const node = loadNodes().find(n => n.id === id);
+  if (node) { $('gateHost').value = node.host; $('gatePath').value = node.path; }
+});
+$('gateDeleteBtn').addEventListener('click', function() {
+  const id = $('gateNodeSelect').value;
+  if (!id) return toast('请先选择节点', 'warning');
+  if (!confirm('确定删除该节点？')) return;
+  saveNodes(loadNodes().filter(n => n.id !== id));
+  const active = getActive();
+  if (active && (active.host.toLowerCase() + '|' + active.path.toLowerCase()) === id) {
+    setActive(null); apiBase = ''; updateChip(); setApiStatus('', '未连接');
+  }
+  showGate();
+});
+$('gateCloseBtn').addEventListener('click', hideGate);
+$('currentNodeChip').addEventListener('click', showGate);
+
+/* ============ 接入控制台：连接成功才保存 ============ */
+$('gateOpenBtn').addEventListener('click', async function() {
+  const host = $('gateHost').value.replace(/^https?:\/\//, '').replace(/\/+$/, '').trim();
+  const path = $('gatePath').value.replace(/^\/+|\/+$/g, '').trim();
+  if (!host || !path) return toast('请填写完整信息', 'warning');
+  if (!/^[a-z0-9.-]+$/i.test(host)) return toast('Worker 域名格式不正确', 'warning');
+
+  const id = host.toLowerCase() + '|' + path.toLowerCase();
+  const remember = $('gateRemember').checked;
+  const now = Date.now();
+  const testBase = 'https://' + host + '/' + path;
+
+  const errEl = $('gateError');
+  if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+
+  this.disabled = true; this.textContent = '连接中...';
+
+  let ok = false, errMsg = '';
+  try {
+    // 先走 /test-api 快速验证
+    const testResp = await rawFetch(testBase + '/test-api', { method: 'GET', timeout: 15000 });
+    if (!testResp.ok) {
+      throw new Error('HTTP ' + testResp.status + ' (test-api)');
+    }
+    const testData = await testResp.json().catch(() => null);
+    if (!testData || testData.message !== 'API 正常运行') {
+      throw new Error('test-api 返回内容异常');
+    }
+    // 再确认 /api/config 可读
+    const cfgResp = await rawFetch(testBase + '/api/config', { method: 'GET', timeout: 15000 });
+    if (!cfgResp.ok) throw new Error('HTTP ' + cfgResp.status + ' (api/config)');
+    const cfgText = await cfgResp.text();
+    try { JSON.parse(cfgText); } catch { throw new Error('api/config 返回格式错误'); }
+    ok = true;
+  } catch (e) {
+    errMsg = e.message || String(e);
+  }
+
+  if (!ok) {
+    if (errEl) {
+      errEl.textContent = '❌ 连接失败：' + errMsg + '\n\n请检查：\n' +
+        '· Worker 域名是否可访问；\n' +
+        '· UUID 是否与 Worker 环境变量 u 完全一致；\n' +
+        '· 若使用了自定义路径 d，这里应填 d 的值（而不是 UUID）。\n' +
+        '· 本次连接失败，节点未保存。';
+      errEl.style.display = 'block';
+      errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    toast('连接失败：' + errMsg, 'error');
+    this.disabled = false; this.textContent = '打开控制台';
+    return;
+  }
+
+  // 验证成功 → 保存节点
+  if (remember) {
+    const nodes = loadNodes();
+    const idx = nodes.findIndex(n => n.id === id);
+    if (idx >= 0) nodes[idx].lastUsed = now;
+    else nodes.push({ id, host, path, name: host + '/' + path, lastUsed: now });
+    saveNodes(nodes);
+  }
+  setActive({ host, path });
+  apiBase = testBase;
+  updateChip();
+  hideGate();
+  this.disabled = false; this.textContent = '打开控制台';
+  toast('已连接', 'success');
+  await initStatus();
+});
+
+/* ==================== 配置应用 ==================== */
+function isOn(val, def) {
+  if (val === undefined || val === null || val === '') return def;
+  return val === 'yes' || val === 'true' || val === true;
+}
+function setToggle(id, val, def) { if ($(id)) $(id).checked = isOn(val, def); }
+function setVal(id, val, def) { if ($(id)) $(id).value = val !== undefined && val !== null ? val : (def || ''); }
+
+// 对配置里可能出现的链式代理凭据做展示层脱敏（不改变 textarea 实际值）
+function maskChainSecrets(v) {
+  if (typeof v !== 'string') return v;
+  return v.replace(
+    /\$((?:sstp|socks5|https?):\/\/)([^@,\s]+)@([^,\s]+)/gi,
+    (_m, proto, _auth, host) => '$' + proto + '***@' + host
+  );
+}
+
+function applyConfig(cfg) {
+  setToggle('ev', cfg.ev, true); setToggle('et', cfg.et, false); setToggle('ex', cfg.ex, false); setToggle('ech', cfg.ech, false);
+  setToggle('freeCpu', cfg.freeCpu, false);
+  setVal('tp', cfg.tp); setVal('alpn', cfg.alpn);
+  setVal('customDNS', cfg.customDNS, 'https://223.5.5.5/dns-query');
+  setVal('customECHDomain', cfg.customECHDomain, 'cloudflare-ech.com');
+  setVal('d', cfg.d); setVal('p', cfg.p); setVal('s', cfg.s); setVal('homepage', cfg.homepage); setVal('scu', cfg.scu);
+  setVal('yx', cfg.yx); setVal('yxURL', cfg.yxURL);
+  setToggle('ena', cfg.ena, false); setToggle('epd', cfg.epd, true); setToggle('epi', cfg.epi, true); setToggle('egi', cfg.egi, true); setToggle('jk', cfg.jk, false);
+  setToggle('ipv4', cfg.ipv4, true); setToggle('ipv6', cfg.ipv6, true);
+  setToggle('ispMobile', cfg.ispMobile, true); setToggle('ispUnicom', cfg.ispUnicom, true); setToggle('ispTelecom', cfg.ispTelecom, true);
+  setVal('rm', cfg.rm); setVal('qj', cfg.qj); setVal('dkby', cfg.dkby); setVal('yxby', cfg.yxby); setVal('ae', cfg.ae);
+
+  const info = [];
+  if (cfg.kvEnabled === true) info.push('✅ KV 已绑定');
+  else if (cfg.kvEnabled === false) info.push('❌ KV 未绑定（保存将失败）');
+  if (cfg.coreVersion) info.push('core ' + cfg.coreVersion);
+  if (cfg.uuid) info.push('uuid ' + String(cfg.uuid).slice(0, 8) + '…');
+
+  const body = Object.entries(cfg)
+    .filter(([k]) => !['kvEnabled', 'coreVersion', 'uuid'].includes(k))
+    .map(([k, v]) => `${k}: ${v ? maskChainSecrets(String(v)) : '(未设置)'}`)
+    .join('\n');
+  $('currentConfigText').textContent = (info.length ? '[' + info.join(' | ') + ']\n' : '') + '当前配置:\n' + body;
+}
+
+function collectConfig() {
+  const cb = (id) => $(id) && $(id).checked ? 'yes' : 'no';
+  const val = (id) => $(id) ? $(id).value : '';
+  const cfg = {
+    ev: cb('ev'), et: cb('et'), ex: cb('ex'), ech: cb('ech'), freeCpu: cb('freeCpu'),
+    tp: val('tp'), alpn: val('alpn'), customDNS: val('customDNS'), customECHDomain: val('customECHDomain'),
+    d: val('d'), p: val('p'), s: val('s'), homepage: val('homepage'), scu: val('scu'),
+    yx: val('yx'), yxURL: val('yxURL'),
+    ena: cb('ena'), epd: cb('epd'), epi: cb('epi'), egi: cb('egi'), jk: cb('jk'),
+    ipv4: cb('ipv4'), ipv6: cb('ipv6'),
+    ispMobile: cb('ispMobile'), ispUnicom: cb('ispUnicom'), ispTelecom: cb('ispTelecom'),
+    rm: val('rm'), qj: val('qj'), dkby: val('dkby'), yxby: val('yxby'), ae: val('ae')
+  };
+  if (cfg.ev === 'no' && cfg.et === 'no' && cfg.ex === 'no') { cfg.ev = 'yes'; $('ev').checked = true; }
+  if (cfg.ech === 'yes') { cfg.dkby = 'yes'; $('dkby').value = 'yes'; }
+  return cfg;
+}
+
+/* ==================== 状态卡片 ==================== */
+async function initStatus() {
+  if (!apiBase) return;
+  setApiStatus('warn', '连接中');
+  try {
+    const [cfg, region, test] = await Promise.all([
+      apiFetch('/api/config'),
+      apiFetch('/region').catch(() => null),
+      apiFetch('/test-api').catch(() => null)
+    ]);
+    applyConfig(cfg);
+
+    // test-api 正常才算完全连通
+    if (test && test.message === 'API 正常运行') setApiStatus('connected', '已连接');
+    else if (test === null) setApiStatus('error', '连接异常');
+    else setApiStatus('error', '连接异常');
+
+    if (region) {
+      const map = { CF: '🌐 官方直连', HK: '🇭🇰 香港', US: '🇺🇸 美国', SG: '🇸🇬 新加坡', JP: '🇯🇵 日本', CUSTOM: '⚙️ 自定义' };
+      $('statusRegion').textContent = map[region.region] || region.region || '未知';
+
+      const methodMap = { '手动指定地区': '手动', '自定义 ProxyIP 模式': 'ProxyIP', '官方直连': '官方直连' };
+      $('statusMethod').textContent = methodMap[region.detectionMethod] || region.detectionMethod || '未知';
+
+      const ci = (region.ci || '').trim();
+      $('statusProxy').textContent = ci ? '自定义: ' + ci : '官方直连';
+      $('statusProxy').title = ci ? '自定义 ProxyIP：' + ci : '未使用自定义 ProxyIP，使用内置地址池';
+
+      const kvOk = cfg.kvEnabled === true;
+      const echOk = cfg.ech === 'yes';
+      $('statusEch').textContent = (echOk ? '✅ 已启用' : '⚠️ 未启用') + (kvOk ? '' : '（KV 未绑定）');
+      $('statusEch').title = kvOk ? '' : 'KV 未绑定，保存配置会失败';
+    } else {
+      $('statusRegion').textContent = '获取失败';
+      $('statusMethod').textContent = '获取失败';
+      $('statusProxy').textContent = '获取失败';
+      const kvOk = cfg.kvEnabled === true;
+      $('statusEch').textContent = (cfg.ech === 'yes' ? '✅ 已启用' : '⚠️ 未启用') + (kvOk ? '' : '（KV 未绑定）');
+    }
+  } catch (e) {
+    setApiStatus('error', '连接失败');
+    $('statusRegion').textContent = '失败';
+    $('statusMethod').textContent = '失败';
+    $('statusProxy').textContent = '失败';
+    $('statusEch').textContent = '失败';
+    toast(e.message, 'error');
+  }
+}
+
+/* ==================== 保存：错误提示增强 ==================== */
+$('btnSave').addEventListener('click', async function() {
+  if (!apiBase) return toast('请先连接节点', 'warning');
+  this.disabled = true; this.textContent = '保存中...';
+  try {
+    const resp = await rawFetch(apiBase + '/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(collectConfig())
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('返回格式错误'); }
+
+    if (!resp.ok || data.success === false) {
+      let msg = data.message || data.error || ('HTTP ' + resp.status);
+      let hint = '';
+      if (resp.status === 503) hint = '（KV 未绑定 / UUID 无效，无法保存）';
+      else if (resp.status === 403) hint = '（API 管理未开启；请在 Worker 侧将 ae 设为 yes）';
+      else if (resp.status === 413) hint = '（配置过大，请减少优选条目或改用 yxURL）';
+      else if (resp.status === 400) hint = '（配置格式无效，请检查输入）';
+      throw new Error(msg + hint);
+    }
+
+    toast('配置已保存', 'success');
+    await initStatus();
+  } catch (e) {
+    toast('保存失败：' + e.message, 'error');
+  } finally {
+    this.disabled = false; this.textContent = '保存全部配置';
+  }
+});
+$('btnReload').addEventListener('click', async function() {
+  if (!apiBase) return;
+  this.disabled = true; this.textContent = '加载中...';
+  try { await initStatus(); toast('配置已刷新', 'success'); }
+  finally { this.disabled = false; this.textContent = '↻ 重新加载'; }
+});
+
+/* ==================== 优选 IP API 管理 ==================== */
+async function loadPreferred() {
+  const alertEl = $('preferredAlert');
+  const tableEl = $('preferredTable');
+  alertEl.style.display = 'none';
+  if (!apiBase) {
+    tableEl.innerHTML = '<div style="text-align:center;color:var(--text-mute);font-size:12px;padding:16px;">未连接</div>';
+    return;
+  }
+  tableEl.innerHTML = '<div style="text-align:center;color:var(--text-mute);font-size:12px;padding:16px;">加载中...</div>';
+  try {
+    const resp = await rawFetch(apiBase + '/api/preferred-ips', { method: 'GET', timeout: 15000 });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('返回格式错误'); }
+
+    if (!resp.ok) {
+      const msg = data.message || data.error || ('HTTP ' + resp.status);
+      let hint = '';
+      if (resp.status === 403) hint = '（请在 Worker 端开启 ae=yes）';
+      else if (resp.status === 503) hint = '（KV 未绑定）';
+      alertEl.textContent = '⚠️ ' + msg + hint;
+      alertEl.style.display = 'block';
+      tableEl.innerHTML = '';
+      return;
+    }
+    if (!data.success) {
+      alertEl.textContent = '⚠️ ' + (data.message || data.error || '未知错误');
+      alertEl.style.display = 'block';
+      tableEl.innerHTML = '';
+      return;
+    }
+    const list = data.data || [];
+    if (list.length === 0) {
+      tableEl.innerHTML = '<div style="text-align:center;color:var(--text-mute);font-size:12px;padding:16px;">暂无优选 IP</div>';
+      return;
+    }
+    const rows = list.map(item => {
+      const ip = escapeHtml(item.ip || '');
+      const port = item.port || 443;
+      const info = splitChainName(item.name || '');
+      let nameCell;
+      if (info.chain) {
+        nameCell = escapeHtml(info.display) +
+          '<span class="chain-badge" title="链式代理：' + escapeAttr(info.chain.type.toUpperCase()) +
+          ' → ' + escapeAttr(info.chain.host) + (info.chain.hasAuth ? '（含认证）' : '') +
+          '">🔗 ' + escapeHtml(info.chain.type.toUpperCase()) + '</span>';
+      } else {
+        nameCell = escapeHtml(info.display);
+      }
+      const addedAt = item.addedAt ? new Date(item.addedAt).toLocaleString() : '';
+      return `<tr>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border);font-family:ui-monospace,monospace;color:var(--accent);">${ip}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border);">${port}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border);">${nameCell}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-mute);font-size:12px;">${addedAt}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid var(--border);text-align:right;">
+          <button class="btn btn-sm btn-danger" data-del-ip="${escapeAttr(item.ip || '')}" data-del-port="${port}">删除</button>
+        </td>
+      </tr>`;
+    }).join('');
+    tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr>
+        <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-2);color:var(--text-dim);font-weight:600;">IP</th>
+        <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-2);color:var(--text-dim);font-weight:600;">端口</th>
+        <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-2);color:var(--text-dim);font-weight:600;">名称</th>
+        <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border-2);color:var(--text-dim);font-weight:600;">添加时间</th>
+        <th style="border-bottom:1px solid var(--border-2);"></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+    tableEl.querySelectorAll('[data-del-ip]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const ip = btn.getAttribute('data-del-ip');
+        const port = parseInt(btn.getAttribute('data-del-port'), 10);
+        await deletePreferred(ip, port);
+      });
+    });
+  } catch (e) {
+    tableEl.innerHTML = '<div style="text-align:center;color:var(--text-mute);font-size:12px;padding:16px;">加载失败</div>';
+    alertEl.textContent = '⚠️ ' + e.message;
+    alertEl.style.display = 'block';
+  }
+}
+
+async function addPreferred() {
+  if (!apiBase) return toast('请先连接节点', 'warning');
+  const raw = $('preferredInput').value.trim();
+  if (!raw) return toast('请输入至少一个 IP', 'warning');
+  const lines = raw.split(/[\r\n]+/).map(x => x.trim()).filter(Boolean);
+  const items = lines.map(line => {
+    let ip = line, port = 443, name = '';
+    const hashIdx = line.indexOf('#');
+    if (hashIdx >= 0) {
+      ip = line.slice(0, hashIdx).trim();
+      name = line.slice(hashIdx + 1).trim();
+    }
+    // 端口提取：兼容 IPv6 方括号写法；链式语法的 $ 部分应放在 # 之后，不参与地址解析
+    const bracketMatch = ip.match(/^\[([^\]]+)\](?::(\d+))?$/);
+    if (bracketMatch) {
+      ip = '[' + bracketMatch[1] + ']';
+      if (bracketMatch[2]) port = parseInt(bracketMatch[2], 10);
+    } else {
+      const lastColon = ip.lastIndexOf(':');
+      if (lastColon > 0) {
+        const p = parseInt(ip.slice(lastColon + 1), 10);
+        if (!isNaN(p) && p > 0 && p < 65536) { port = p; ip = ip.slice(0, lastColon); }
+      }
+    }
+    return { ip, port, name: name || ('API优选-' + ip + ':' + port) };
+  });
+  if (items.length === 0) return toast('解析失败', 'warning');
+  if (!confirm('确定添加 ' + items.length + ' 个 IP 吗？')) return;
+  try {
+    const resp = await rawFetch(apiBase + '/api/preferred-ips', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(items),
+      timeout: 20000
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('返回格式错误'); }
+    if (!resp.ok || !data.success) {
+      let hint = '';
+      if (resp.status === 403) hint = '（请在 Worker 端开启 ae=yes）';
+      else if (resp.status === 503) hint = '（KV 未绑定）';
+      throw new Error((data.message || data.error || ('HTTP ' + resp.status)) + hint);
+    }
+    toast('添加成功：' + (data.added || 0) + ' 个' + (data.skipped ? '，跳过 ' + data.skipped + ' 个（已存在）' : ''), 'success');
+    $('preferredInput').value = '';
+    loadPreferred();
+  } catch (e) {
+    toast('添加失败：' + e.message, 'error');
+  }
+}
+
+async function deletePreferred(ip, port) {
+  if (!apiBase) return;
+  if (!confirm('确定删除 ' + ip + ':' + port + ' 吗？')) return;
+  try {
+    const resp = await rawFetch(apiBase + '/api/preferred-ips', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip, port }),
+      timeout: 15000
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('返回格式错误'); }
+    if (!resp.ok || !data.success) throw new Error(data.message || data.error || ('HTTP ' + resp.status));
+    toast('已删除', 'success');
+    loadPreferred();
+  } catch (e) {
+    toast('删除失败：' + e.message, 'error');
+  }
+}
+
+async function clearPreferred() {
+  if (!apiBase) return;
+  if (!confirm('确定清空全部优选 IP 吗？此操作不可恢复！')) return;
+  try {
+    const resp = await rawFetch(apiBase + '/api/preferred-ips', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ all: true }),
+      timeout: 20000
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch { throw new Error('返回格式错误'); }
+    if (!resp.ok || !data.success) throw new Error(data.message || data.error || ('HTTP ' + resp.status));
+    toast('已清空：' + (data.deletedCount || 0) + ' 个', 'success');
+    loadPreferred();
+  } catch (e) {
+    toast('清空失败：' + e.message, 'error');
+  }
+}
+
+$('btnLoadPreferred').addEventListener('click', loadPreferred);
+$('btnAddPreferred').addEventListener('click', addPreferred);
+$('btnClearPreferred').addEventListener('click', clearPreferred);
+
+/* ==================== 启动 ==================== */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    this.classList.add('active');
+    $('panel-' + this.dataset.tab).classList.add('active');
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateChip();
+  const active = getActive();
+  if (active) {
+    apiBase = 'https://' + active.host + '/' + active.path;
+    initStatus();
+  } else {
+    setApiStatus('', '未连接');
+    showGate();
+  }
+});
+})();
+</script>
+</body>
+</html>
