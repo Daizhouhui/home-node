@@ -5,19 +5,19 @@
 > 这是一个模板仓库：**你只需要 Fork、添加一个 Secret、手动跑一次**，不需要改代码。
 ---
 
-[VPN Gate](https://dzh996214.github.io/gate/)
+[VPN Gate](https://daizhouhui.github.io/gate/)
 
 
-[VPN Gate nodes.txt](https://dzh996214.github.io/gate/nodes.txt)
+[VPN Gate nodes.txt](https://daizhouhui.github.io/gate/nodes.txt)
 
 
-[VPN Gate yx.txt](https://dzh996214.github.io/gate/yx.txt)
+[VPN Gate yx.txt](https://daizhouhui.github.io/gate/yx.txt)
 
 
-[VPN Gate my_nodes.txt](https://dzh996214.github.io/gate/my_nodes.txt)
+[VPN Gate my_nodes.txt](https://daizhouhui.github.io/gate/my_nodes.txt)
 
 
-[VPN Gate json](https://dzh996214.github.io/gate/node.json)
+[VPN Gate json](https://daizhouhui.github.io/gate/node.json)
 ## 特性
 
 - 只用 VPN Gate 的 TCP 节点（VPN Gate 的 TCP 端口即 SSTP 端口），并发检测
