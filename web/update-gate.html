@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>触发 check.yml 工作流</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f6f8fa;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .card {
+    background: #fff; border: 1px solid #d0d7de; border-radius: 12px;
+    padding: 32px; width: 100%; max-width: 460px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+  h2 { font-size: 20px; margin-bottom: 6px; color: #1f2328; }
+  .repo { font-size: 13px; color: #656d76; margin-bottom: 24px; word-break: break-all; }
+  label { display: block; font-size: 14px; font-weight: 600; color: #1f2328; margin-bottom: 6px; }
+  input[type="password"], input[type="text"] {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    border: 1px solid #d0d7de; border-radius: 8px; margin-bottom: 18px;
+    outline: none; transition: border-color .15s;
+  }
+  input:focus { border-color: #0969da; box-shadow: 0 0 0 3px rgba(9,105,218,.15); }
+  .hint { font-size: 12px; color: #656d76; margin-top: -12px; margin-bottom: 18px; }
+
+  /* 记住令牌 开关行 */
+  .remember-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: -8px; margin-bottom: 18px;
+    font-size: 13px; color: #1f2328;
+  }
+  .remember-row input[type="checkbox"] {
+    width: 16px; height: 16px; cursor: pointer; margin: 0;
+    accent-color: #0969da;
+  }
+  .remember-row label { margin: 0; font-weight: 400; cursor: pointer; }
+
+  button {
+    width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
+    color: #fff; background: #1f883d; border: none; border-radius: 8px;
+    cursor: pointer; transition: background .15s;
+  }
+  button:hover { background: #1a7f37; }
+  button:disabled { background: #94d3a2; cursor: not-allowed; }
+
+  .clear-btn {
+    margin-top: 10px; background: #fff; color: #cf222e;
+    border: 1px solid #d0d7de; font-weight: 500;
+  }
+  .clear-btn:hover { background: #ffebe9; border-color: #ff8182; }
+
+  #status {
+    margin-top: 18px; padding: 12px; border-radius: 8px;
+    font-size: 13px; line-height: 1.5; display: none; white-space: pre-wrap;
+  }
+  #status.success { display: block; background: #dafbe1; color: #1a7f37; border: 1px solid #94d3a2; }
+  #status.error { display: block; background: #ffebe9; color: #cf222e; border: 1px solid #ff8182; }
+  #status.info { display: block; background: #ddf4ff; color: #0969da; border: 1px solid #54aeff; }
+  a { color: #0969da; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>触发工作流</h2>
+  <p class="repo">仓库：<strong>dzh996214/gate</strong><br>工作流：<strong>check.yml</strong></p>
+
+  <label for="token">GAT 令牌（Personal Access Token）</label>
+  <input type="password" id="token" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off">
+
+  <div class="remember-row">
+    <input type="checkbox" id="remember" checked>
+    <label for="remember">记住令牌（保存在本浏览器）</label>
+  </div>
+
+  <label for="branch">目标分支（ref）</label>
+  <input type="text" id="branch" value="main" placeholder="例如 main">
+  <p class="hint">工作流文件必须存在于该分支上，否则会返回 404。</p>
+
+  <button id="runBtn" onclick="triggerWorkflow()">🚀 运行 check.yml</button>
+  <button class="clear-btn" onclick="clearSaved()">🗑️ 清除已保存的令牌</button>
+
+  <div id="status"></div>
+</div>
+
+<script>
+// ---- 存储键名 ----
+const KEY_TOKEN  = 'gh_gat_token';
+const KEY_BRANCH = 'gh_gat_branch';
+
+// ---- 页面加载：回填已保存的令牌和分支 ----
+(function init() {
+  const savedToken  = localStorage.getItem(KEY_TOKEN);
+  const savedBranch = localStorage.getItem(KEY_BRANCH);
+
+  if (savedToken) {
+    document.getElementById('token').value = savedToken;
+    document.getElementById('remember').checked = true;
+  } else {
+    // 没有保存过令牌时，默认不勾选"记住"，避免误导
+    document.getElementById('remember').checked = false;
+  }
+  if (savedBranch) {
+    document.getElementById('branch').value = savedBranch;
+  }
+})();
+
+// ---- 取消勾选"记住令牌"时，立即清除本地存储 ----
+document.getElementById('remember').addEventListener('change', function () {
+  if (!this.checked) {
+    localStorage.removeItem(KEY_TOKEN);
+    localStorage.removeItem(KEY_BRANCH);
+  }
+});
+
+// ---- 主逻辑：触发工作流 ----
+async function triggerWorkflow() {
+  const token    = document.getElementById('token').value.trim();
+  const branch   = document.getElementById('branch').value.trim() || 'main';
+  const remember = document.getElementById('remember').checked;
+  const btn      = document.getElementById('runBtn');
+  const status   = document.getElementById('status');
+
+  status.className = '';
+  status.style.display = 'none';
+
+  if (!token) {
+    showStatus('error', '请填写 GAT 令牌。');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 正在触发...';
+  showStatus('info', '请求已发送，等待 GitHub 响应…');
+
+  const apiUrl = 'https://api.github.com/repos/dzh996214/gate/actions/workflows/check.yml/dispatches';
+
+  try {
+    const resp = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ ref: branch })
+    });
+
+    if (resp.status === 204) {
+      // 触发成功：根据开关决定是否保存
+      if (remember) {
+        localStorage.setItem(KEY_TOKEN, token);
+        localStorage.setItem(KEY_BRANCH, branch);
+        showStatus('success', '✅ 触发成功！令牌已保存到本浏览器，下次打开页面会自动填入。');
+      } else {
+        showStatus('success', '✅ 触发成功！（未勾选"记住令牌"，本次令牌不会被保存）');
+      }
+      return;
+    }
+
+    // 非 204：解析错误信息
+    let errMsg = '';
+    try {
+      const data = await resp.json();
+      errMsg = data.message || JSON.stringify(data);
+    } catch {
+      errMsg = `HTTP ${resp.status} ${resp.statusText}`;
+    }
+
+    let friendly = '';
+    if (resp.status === 401) {
+      friendly = '令牌无效或已过期，请检查 GAT 是否正确。';
+    } else if (resp.status === 403) {
+      friendly = '令牌权限不足。Fine-grained PAT 需要 Actions: write；Classic PAT 需要 repo 权限。';
+    } else if (resp.status === 404) {
+      friendly = '仓库或工作流不存在，或工作流文件不在指定分支上。请确认 check.yml 已存在于 "' + branch + '" 分支。';
+    } else if (resp.status === 422) {
+      friendly = '分支不存在，或工作流不支持 workflow_dispatch 触发（缺少 on: workflow_dispatch 配置）。';
+    } else {
+      friendly = '请求失败，请检查参数后重试。';
+    }
+    showStatus('error', `${friendly}\n\nGitHub 返回：${errMsg}`);
+
+  } catch (e) {
+    if (e instanceof TypeError && e.message.includes('fetch')) {
+      showStatus('error',
+        '网络请求失败。常见原因：\n' +
+        '• 当前页面以 file:// 方式打开，浏览器拦截了跨域请求。\n' +
+        '• 请把文件放到 HTTP/HTTPS 环境打开（例如 python3 -m http.server 8080）。\n' +
+        '• 或改用 curl 命令在终端执行。\n\n' +
+        `浏览器原始错误：${e.message}`
+      );
+    } else {
+      showStatus('error', `发生未知错误：${e.message}`);
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 运行 check.yml';
+  }
+}
+
+// ---- 清除已保存的令牌 ----
+function clearSaved() {
+  localStorage.removeItem(KEY_TOKEN);
+  localStorage.removeItem(KEY_BRANCH);
+  document.getElementById('token').value = '';
+  document.getElementById('remember').checked = false;
+  showStatus('info', '🗑️ 已清除本浏览器保存的令牌和分支。');
+}
+
+function showStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = type;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+</script>
+
+</body>
+</html>
